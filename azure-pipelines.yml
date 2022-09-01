@@ -1,0 +1,134 @@
+name: Demo Pipelinevariables:
+  pub_path: '/home/dem/XV/ADO/dotnet-demoapp/src/bin/Release/net6.0/publish'
+  dev_ns: 'demo-dev'
+  test_ns: 'demo-test'
+  prod_ns: 'demo-prod'
+  app_name: 'dotnet-demo'
+  dev_tag: $[format('dev-{0:yyyyMMddHHmmss}', pipeline.startTime)]
+  test_tag: $[format('test-{0:yyyyMMddHHmmss}', pipeline.startTime)]
+  prod_tag: $[format('prod-{0:yyyyMMddHHmmss}', pipeline.startTime)]parameters:
+  - name: buildConfig
+    displayName: Build Configuration
+    type: string
+    default: Release
+    values:
+    - Release
+    - Debug
+  - name: labId
+    displayName: Lab Id
+    type: string
+    default: shared-410
+    values:
+    - shared-410
+  - name: sandbox
+    displayName: Sandbox
+    type: string
+    default: openshift
+    values:
+    - openshifttrigger:
+- nonepool:
+  vmImage: ubuntu-lateststages:
+- stage: Build
+  displayName: Build Application Container Image
+  jobs:
+  - job: Build
+    displayName: Build Job
+    steps:
+    - script: dotnet publish app --configuration ${{ parameters.buildConfig }}
+      displayName: 'dotnet publish app ${{ parameters.buildConfig }}'
+    - task: oc-cmd@2
+      displayName: 'Build application container image $(app_name)'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: 'start-build $(app_name) --from-dir=$(pub_path) --follow -n $(dev_ns)'- stage: DeployDEV
+  displayName: Deploy Application in DEV Cluster
+  jobs:
+  - job: Deploy
+    displayName: Deploy Job
+    steps:
+    - checkout: none
+    - task: oc-cmd@2
+      displayName: 'Tag container image $(app_name) with $(dev_tag)'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: 'tag $(app_name):latest $(app_name):$(dev_tag) -n $(dev_ns)'
+    - task: oc-cmd@2
+      displayName: 'Update container image with $(dev_tag)'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: patch -n $(dev_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(dev_ns)/$(app_name):$(dev_tag)"}]}}}}'
+    - task: oc-cmd@2
+      displayName: 'Deploy $(app_name} in DEV Cluster'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: 'rollout latest $(app_name) -n $(dev_ns)'- stage: PushImageTEST
+  displayName: Push Image to TEST Cluster
+  jobs:
+  - job: PushImage
+    displayName: Push Image Job
+    container: registry.access.redhat.com/ubi8/skopeo:8.4-15
+    steps:
+    - checkout: none
+    - task: oc-setup@2
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+    - script: |
+        skopeo copy --src-creds $(oc whoami):$(oc whoami -t) --dest-creds $(oc whoami):$(oc whoami -t) \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(dev_ns)/$(app_name):latest \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(test_ns)/$(app_name):$(test_tag)
+    - task: oc-cmd@2
+      displayName: 'Update container image with $(test_tag)'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: patch -n $(test_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(test_ns)/$(app_name):$(test_tag)"}]}}}}'- stage: DeployTEST
+  displayName: Deploy Application in TEST Cluster
+  jobs:
+  - job: Deploy
+    displayName: Deploy Job
+    steps:
+    - checkout: none
+    - task: oc-cmd@2
+      displayName: 'Deploy $(app_name} in TEST Cluster'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: 'rollout latest $(app_name) -n $(test_ns)'- stage: PushImagePROD
+  displayName: Push Image to TEST Cluster
+  jobs:
+  - job: PushImage
+    displayName: Push Image Job
+    container: registry.access.redhat.com/ubi8/skopeo:8.4-15
+    steps:
+    - checkout: none
+    - task: oc-setup@2
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'PDS'
+    - script: |
+        skopeo copy --src-creds $(oc whoami):$(oc whoami -t) --dest-creds $(oc whoami):$(oc whoami -t) \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(dev_ns)/$(app_name):latest \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(prod_ns)/$(app_name):$(prod_tag)
+    - task: oc-cmd@2
+      displayName: 'Update container image with $(prod_tag)'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: patch -n $(prod_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(prod_ns)/$(app_name):$(prod_tag)"}]}}}}'- stage: DeployPROD
+  displayName: Deploy Application in PROD Cluster
+  jobs:
+  - job: Deploy
+    displayName: Deploy Job
+    steps:
+    - checkout: none
+    - task: oc-cmd@2
+      displayName: 'Deploy $(app_name} in PRODUCTION Cluster'
+      inputs:
+        connectionType: 'OpenShift Connection Service'
+        openshiftService: 'OCP-test'
+        cmd: 'rollout latest $(app_name) -n $(prod_ns)'
