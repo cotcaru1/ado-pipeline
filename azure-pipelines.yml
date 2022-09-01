@@ -8,7 +8,9 @@ variables:
   app_name: 'dotnet-demo'
   dev_tag: $[format('dev-{0:yyyyMMddHHmmss}', pipeline.startTime)]
   test_tag: $[format('test-{0:yyyyMMddHHmmss}', pipeline.startTime)]
-  prod_tag: $[format('prod-{0:yyyyMMddHHmmss}', pipeline.startTime)]parameters:
+  prod_tag: $[format('prod-{0:yyyyMMddHHmmss}', pipeline.startTime)]
+  
+  parameters:
   - name: buildConfig
     displayName: Build Configuration
     type: string
@@ -27,9 +29,15 @@ variables:
     type: string
     default: openshift
     values:
-    - openshifttrigger:
-- nonepool:
-  vmImage: ubuntu-lateststages:
+    - openshift
+
+trigger:
+- none
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
 - stage: Build
   displayName: Build Application Container Image
   jobs:
@@ -43,7 +51,9 @@ variables:
       inputs:
         connectionType: 'OpenShift Connection Service'
         openshiftService: 'OCP-test'
-        cmd: 'start-build $(app_name) --from-dir=$(pub_path) --follow -n $(dev_ns)'- stage: DeployDEV
+        cmd: 'start-build $(app_name) --from-dir=$(pub_path) --follow -n $(dev_ns)'
+  
+- stage: DeployDEV
   displayName: Deploy Application in DEV Cluster
   jobs:
   - job: Deploy
@@ -67,7 +77,9 @@ variables:
       inputs:
         connectionType: 'OpenShift Connection Service'
         openshiftService: 'OCP-test'
-        cmd: 'rollout latest $(app_name) -n $(dev_ns)'- stage: PushImageTEST
+        cmd: 'rollout latest $(app_name) -n $(dev_ns)'
+  
+- stage: PushImageTEST
   displayName: Push Image to TEST Cluster
   jobs:
   - job: PushImage
@@ -88,7 +100,9 @@ docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{
       inputs:
         connectionType: 'OpenShift Connection Service'
         openshiftService: 'OCP-test'
-        cmd: patch -n $(test_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(test_ns)/$(app_name):$(test_tag)"}]}}}}'- stage: DeployTEST
+        cmd: patch -n $(test_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(test_ns)/$(app_name):$(test_tag)"}]}}}}'
+
+- stage: DeployTEST
   displayName: Deploy Application in TEST Cluster
   jobs:
   - job: Deploy
@@ -100,7 +114,9 @@ docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{
       inputs:
         connectionType: 'OpenShift Connection Service'
         openshiftService: 'OCP-test'
-        cmd: 'rollout latest $(app_name) -n $(test_ns)'- stage: PushImagePROD
+        cmd: 'rollout latest $(app_name) -n $(test_ns)'
+
+- stage: PushImagePROD
   displayName: Push Image to TEST Cluster
   jobs:
   - job: PushImage
@@ -121,7 +137,9 @@ docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{
       inputs:
         connectionType: 'OpenShift Connection Service'
         openshiftService: 'OCP-test'
-        cmd: patch -n $(prod_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(prod_ns)/$(app_name):$(prod_tag)"}]}}}}'- stage: DeployPROD
+        cmd: patch -n $(prod_ns) dc/$(app_name) --patch='{"spec":{"template":{"spec":{"containers":[{"name":"$(app_name)","image":"image-registry.openshift-image-registry.svc:5000/$(prod_ns)/$(app_name):$(prod_tag)"}]}}}}'
+
+- stage: DeployPROD
   displayName: Deploy Application in PROD Cluster
   jobs:
   - job: Deploy
