@@ -93,8 +93,8 @@ stages:
         openshiftService: 'OCP-test'
     - script: |
         skopeo copy --src-creds $(oc whoami):$(oc whoami -t) --dest-creds $(oc whoami):$(oc whoami -t) \
-docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(dev_ns)/$(app_name):latest \
-docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(test_ns)/$(app_name):$(test_tag)
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.redhatworkshops.io/$(dev_ns)/$(app_name):latest \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.redhatworkshops.io/$(test_ns)/$(app_name):$(test_tag)
     - task: oc-cmd@2
       displayName: 'Update container image with $(test_tag)'
       inputs:
@@ -130,8 +130,8 @@ docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{
         openshiftService: 'PDS'
     - script: |
         skopeo copy --src-creds $(oc whoami):$(oc whoami -t) --dest-creds $(oc whoami):$(oc whoami -t) \
-docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(dev_ns)/$(app_name):latest \
-docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.opentlc.com/$(prod_ns)/$(app_name):$(prod_tag)
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.redhatworkshops.io/$(dev_ns)/$(app_name):latest \
+docker://default-route-openshift-image-registry.apps.${{ parameters.labId }}.${{ parameters.sandbox }}.redhatworkshops.io/$(prod_ns)/$(app_name):$(prod_tag)
     - task: oc-cmd@2
       displayName: 'Update container image with $(prod_tag)'
       inputs:
