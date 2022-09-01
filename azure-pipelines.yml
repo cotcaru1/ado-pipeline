@@ -125,7 +125,7 @@ stages:
     - task: oc-setup@2
       inputs:
         connectionType: 'OpenShift Connection Service'
-        openshiftService: 'PDS'
+        openshiftService: 'OCP-test'
     - script: |
         skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds $(oc whoami):$(oc whoami -t) --dest-creds $(oc whoami):$(oc whoami -t) docker://default-route-openshift-image-registry.apps.shared-410.openshift.redhatworkshops.io/demo-dev/dotnet-demo:dev docker://default-route-openshift-image-registry.apps.shared-410.openshift.redhatworkshops.io/demo-prod/dotnet-demo:prod
     - task: oc-cmd@2
