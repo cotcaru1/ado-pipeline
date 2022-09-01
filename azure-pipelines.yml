@@ -10,7 +10,7 @@ variables:
   test_tag: $[format('test-{0:yyyyMMddHHmmss}', pipeline.startTime)]
   prod_tag: $[format('prod-{0:yyyyMMddHHmmss}', pipeline.startTime)]
   
-  parameters:
+parameters:
   - name: buildConfig
     displayName: Build Configuration
     type: string
