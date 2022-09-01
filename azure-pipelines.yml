@@ -1,4 +1,6 @@
-name: Demo Pipelinevariables:
+name: Demo Pipeline
+
+variables:
   pub_path: '/home/dem/XV/ADO/dotnet-demoapp/src/bin/Release/net6.0/publish'
   dev_ns: 'demo-dev'
   test_ns: 'demo-test'
